@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatórios – Clínica</title>
+  <!-- Chart.js e Plugins -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <style>
+    :root {
+      --bg: #f4f7fa;
+      --card-bg1: #3498db;
+      --card-bg2: #2ecc71;
+      --card-bg3: #9b59b6;
+      --text: #2c3e50;
+      --white: #fff;
+      --shadow: rgba(0, 0, 0, 0.1);
+      --filter-bg: #ecf0f1;
+      --filter-border: #bdc3c7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      padding: 20px;
+      color: var(--text);
+    }
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: var(--white);
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px var(--shadow);
+      position: relative;
+    }
+    #loading {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.8); font-size: 1.2rem; z-index: 10;
+    }
+    h2 { text-align: center; margin-bottom: 16px; font-size: 1.8rem; }
+    .filter {
+      display: flex; gap: 12px; margin-bottom: 24px; align-items: center;
+      background: var(--filter-bg); padding: 12px; border-radius: 6px;
+      border: 1px solid var(--filter-border);
+    }
+    .filter label { display: flex; flex-direction: column; font-size: 0.9rem; }
+    .filter input {
+      padding: 6px; border: 1px solid var(--filter-border);
+      border-radius: 4px; margin-top: 4px;
+    }
+    .filter button {
+      padding: 8px 16px; border: none; background: var(--card-bg1);
+      color: var(--white); border-radius: 4px; cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .filter button:hover { background: #2980b9; }
+    .summary {
+      display: flex; justify-content: space-between; margin-bottom: 32px;
+    }
+    .card {
+      flex: 1; background: var(--card-bg1); color: var(--white);
+      margin: 0 8px; padding: 20px; border-radius: 8px;
+      text-align: center; font-size: 1.1rem;
+    }
+    .card:nth-child(2) { background: var(--card-bg2); }
+    .card:nth-child(3) { background: var(--card-bg3); }
+    .charts {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;
+    }
+    .chart-wrapper {
+      background: var(--white); padding: 16px; border-radius: 8px;
+      box-shadow: 0 1px 4px var(--shadow); display: flex;
+      flex-direction: column; height: 100%;
+    }
+    .chart-wrapper canvas { flex: 1; }
+    .no-data {
+      text-align: center; color: #888; font-size: 1rem; margin-top: 40px;
+    }
+    @media (max-width: 600px) {
+      .summary { flex-direction: column; }
+      .card { margin: 8px 0; }
+      .filter { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="loading">Carregando relatórios...</div>
+    <h2>📈 Relatórios da Clínica</h2>
+    <div class="filter">
+      <label>Data Inicial<input type="date" id="startDate" /></label>
+      <label>Data Final<input type="date" id="endDate" /></label>
+      <button id="btnFilter">Filtrar</button>
+    </div>
+    <div class="summary">
+      <div class="card"><h3>Total de Exames</h3><p id="totalExames">0</p></div>
+      <div class="card"><h3>Exames Hoje</h3><p id="hojeExames">0</p></div>
+      <div class="card"><h3>Usuários Ativos</h3><p id="usuariosAtivos">0</p></div>
+    </div>
+    <div class="charts">
+      <div class="chart-wrapper"><canvas id="chartAgendamentos" role="img"></canvas></div>
+      <div class="chart-wrapper"><canvas id="chartMesAno" role="img"></canvas></div>
+      <div class="chart-wrapper"><canvas id="chartTipoExame" role="img"></canvas></div>
+      <div class="chart-wrapper"><canvas id="chartStatus" role="img"></canvas></div>
+    </div>
+  </div>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script>
+     const firebaseConfig = {
+      apiKey: "AIzaSyDIfTE3Nkwb_yiDKJhmwj_o3I8guislO8g",
+      authDomain: "clinica-3f715.firebaseapp.com",
+      databaseURL: "https://clinica-3f715-default-rtdb.firebaseio.com",
+      projectId: "clinica-3f715",
+      storageBucket: "clinica-3f715.firebasestorage.app",
+      messagingSenderId: "456473690332",
+      appId: "1:456473690332:web:667b239d83c802ecb83419",
+      measurementId: "G-7XHX0XC3BD"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    let allData = {};
+    const baseOptions = {
+      plugins: { datalabels:{ anchor:'end', align:'top', font:{size:12} }, legend:{position:'top', labels:{font:{size:14}}} },
+      maintainAspectRatio:false, aspectRatio:2,
+      scales:{ x:{ticks:{maxRotation:45,minRotation:45,font:{size:12}}, grid:{display:false}}, y:{beginAtZero:true, ticks:{stepSize:1,font:{size:12}}, grid:{color:'#eee'}} }
+    };
+    const chartAgend = new Chart(
+      document.getElementById('chartAgendamentos'),
+      { type:'line', options:baseOptions, data:{ labels:[], datasets:[{ label:'Agendamentos por Dia', data:[], tension:0.4 }] }, plugins:[ChartDataLabels] }
+    );
+    const chartMes = new Chart(
+      document.getElementById('chartMesAno'),
+      { type:'bar', options:baseOptions, data:{ labels:[], datasets:[
+          { label:'Exames por Mês/Ano', data:[], backgroundColor:'rgba(155,89,182,0.7)' },
+          { label:'Média Mensal', type:'line', data:[], borderColor:'rgba(231,76,60,0.8)', borderWidth:2, fill:false, datalabels:{display:false} }
+        ] }, plugins:[ChartDataLabels] }
+    );
+    const chartTipo = new Chart(document.getElementById('chartTipoExame'), { type:'bar', options:baseOptions, data:{ labels:[], datasets:[{ label:'Exames por Tipo', data:[], backgroundColor:'rgba(52,152,219,0.7)' }] }, plugins:[ChartDataLabels] });
+    const chartStatus = new Chart(document.getElementById('chartStatus'), { type:'bar', options:baseOptions, data:{ labels:[], datasets:[{ label:'Exames por Status', data:[], backgroundColor:'rgba(46,204,113,0.7)' }] }, plugins:[ChartDataLabels] });
+    function ordenarChavesPorData(chaves){ return chaves.map(d=>{const [dia,mes,ano]=d.split('/');return{label:d,ts:new Date(`${ano}-${mes}-${dia}`).getTime()}}).sort((a,b)=>a.ts-b.ts).map(o=>o.label); }
+    function renderRelatorios(dataObj){
+      const start=document.getElementById('startDate').value; const end=document.getElementById('endDate').value;
+      const hoje=new Date().toLocaleDateString('pt-BR'); let total=0, hojeCount=0;
+      const porDia={}, porMes={}, porTipo={}, porStatus={};
+      Object.values(dataObj).forEach(item=>{const iso=item.data||''; if(!iso) return; if(start&&iso<start) return; if(end&&iso>end) return; total++; const [ano,mes,dia]=iso.split('-'); const diaBR=`${dia}/${mes}/${ano}`; porDia[diaBR]=(porDia[diaBR]||0)+1; const keyMes=`${ano}-${mes}`; porMes[keyMes]=(porMes[keyMes]||0)+1; if(diaBR===hoje) hojeCount++; porTipo[item.tipo||'Desconhecido']=(porTipo[item.tipo]||0)+1; porStatus[item.status||'Pendente']=(porStatus[item.status]||0)+1; });
+      document.getElementById('loading').style.display='none';
+      document.getElementById('totalExames').textContent=total;
+      document.getElementById('hojeExames').textContent=hojeCount;
+      document.getElementById('usuariosAtivos').textContent=Object.values(dataObj).filter(u=>u.usuarioAtivo).length;
+      if(!total){document.querySelector('.charts').innerHTML='<p class="no-data">Nenhum agendamento encontrado para este período.</p>';return;}
+      const labelsDia=ordenarChavesPorData(Object.keys(porDia)); chartAgend.data.labels=labelsDia; chartAgend.data.datasets[0].data=labelsDia.map(d=>porDia[d]); chartAgend.update();
+      const months=Object.keys(porMes).sort(); const labelsMes=months.map(m=>{const [ano,mes]=m.split('-');return mes+'/'+ano;}); const valuesMes=months.map(m=>porMes[m]); const avg=valuesMes.reduce((a,b)=>a+b,0)/valuesMes.length; const avgArr=valuesMes.map(()=>parseFloat(avg.toFixed(1)));
+      chartMes.data.labels=labelsMes; chartMes.data.datasets[0].data=valuesMes; chartMes.data.datasets[1].data=avgArr; chartMes.update();
+      chartTipo.data.labels=Object.keys(porTipo); chartTipo.data.datasets[0].data=Object.values(porTipo); chartTipo.update();
+      chartStatus.data.labels=Object.keys(porStatus); chartStatus.data.datasets[0].data=Object.values(porStatus); chartStatus.update();
+    }
+    db.ref('agendamentos').on('value',snap=>{allData=snap.val()||{};renderRelatorios(allData);});
+    document.getElementById('btnFilter').addEventListener('click',()=>renderRelatorios(allData));
+  </script>
+</body>
+</html>

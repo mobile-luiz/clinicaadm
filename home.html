@@ -81,6 +81,13 @@
       background: #6d3289;
     }
 
+    .btn-relatorios {
+      background: #f39c12;
+    }
+    .btn-relatorios:hover {
+      background: #d78b0a;
+    }
+
     .btn-sair {
       background: #c0392b;
     }
@@ -123,6 +130,10 @@
       👤 Meu Perfil
     </button>
 
+    <button class="btn-relatorios" onclick="irParaRelatorios()">
+      📈 Relatórios
+    </button>
+
     <button class="btn-sair" onclick="logout()">
       🚪 Sair
     </button>
@@ -163,6 +174,10 @@
 
     function irParaPerfil() {
       window.location.href = "perfil.html";
+    }
+
+    function irParaRelatorios() {
+      window.location.href = "relatorios.html";
     }
 
     function logout() {
