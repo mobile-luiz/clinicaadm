@@ -110,54 +110,18 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script>
-     const firebaseConfig = {
-      apiKey: "AIzaSyDIfTE3Nkwb_yiDKJhmwj_o3I8guislO8g",
-      authDomain: "clinica-3f715.firebaseapp.com",
-      databaseURL: "https://clinica-3f715-default-rtdb.firebaseio.com",
-      projectId: "clinica-3f715",
-      storageBucket: "clinica-3f715.firebasestorage.app",
-      messagingSenderId: "456473690332",
-      appId: "1:456473690332:web:667b239d83c802ecb83419",
-      measurementId: "G-7XHX0XC3BD"
-    };
-    firebase.initializeApp(firebaseConfig);
+    // Inicializa apenas com a URL do Realtime Database
+    const databaseURL = "https://clinica-3f715-default-rtdb.firebaseio.com";
+    firebase.initializeApp({ databaseURL });
     const db = firebase.database();
     let allData = {};
-    const baseOptions = {
-      plugins: { datalabels:{ anchor:'end', align:'top', font:{size:12} }, legend:{position:'top', labels:{font:{size:14}}} },
-      maintainAspectRatio:false, aspectRatio:2,
-      scales:{ x:{ticks:{maxRotation:45,minRotation:45,font:{size:12}}, grid:{display:false}}, y:{beginAtZero:true, ticks:{stepSize:1,font:{size:12}}, grid:{color:'#eee'}} }
-    };
-    const chartAgend = new Chart(
-      document.getElementById('chartAgendamentos'),
-      { type:'line', options:baseOptions, data:{ labels:[], datasets:[{ label:'Agendamentos por Dia', data:[], tension:0.4 }] }, plugins:[ChartDataLabels] }
-    );
-    const chartMes = new Chart(
-      document.getElementById('chartMesAno'),
-      { type:'bar', options:baseOptions, data:{ labels:[], datasets:[
-          { label:'Exames por Mês/Ano', data:[], backgroundColor:'rgba(155,89,182,0.7)' },
-          { label:'Média Mensal', type:'line', data:[], borderColor:'rgba(231,76,60,0.8)', borderWidth:2, fill:false, datalabels:{display:false} }
-        ] }, plugins:[ChartDataLabels] }
-    );
+    const baseOptions = { plugins: { datalabels: { anchor:'end', align:'top', font:{size:12} }, legend:{position:'top', labels:{font:{size:14}}} }, maintainAspectRatio:false, aspectRatio:2, scales: { x: { ticks: { maxRotation:45, minRotation:45, font:{size:12} }, grid: { display:false } }, y: { beginAtZero:true, ticks:{ stepSize:1, font:{size:12} }, grid:{color:'#eee'} } }};
+    const chartAgend = new Chart(document.getElementById('chartAgendamentos'), { type:'line', options:baseOptions, data:{ labels:[], datasets:[{ label:'Agendamentos por Dia', data:[], tension:0.4 }] }, plugins:[ChartDataLabels] });
+    const chartMes = new Chart(document.getElementById('chartMesAno'), { type:'bar', options:baseOptions, data:{ labels:[], datasets:[{ label:'Exames por Mês/Ano', data:[], backgroundColor:'rgba(155,89,182,0.7)' },{ label:'Média Mensal', type:'line', data:[], borderColor:'rgba(231,76,60,0.8)', borderWidth:2, fill:false, datalabels:{display:false} }] }, plugins:[ChartDataLabels] });
     const chartTipo = new Chart(document.getElementById('chartTipoExame'), { type:'bar', options:baseOptions, data:{ labels:[], datasets:[{ label:'Exames por Tipo', data:[], backgroundColor:'rgba(52,152,219,0.7)' }] }, plugins:[ChartDataLabels] });
     const chartStatus = new Chart(document.getElementById('chartStatus'), { type:'bar', options:baseOptions, data:{ labels:[], datasets:[{ label:'Exames por Status', data:[], backgroundColor:'rgba(46,204,113,0.7)' }] }, plugins:[ChartDataLabels] });
     function ordenarChavesPorData(chaves){ return chaves.map(d=>{const [dia,mes,ano]=d.split('/');return{label:d,ts:new Date(`${ano}-${mes}-${dia}`).getTime()}}).sort((a,b)=>a.ts-b.ts).map(o=>o.label); }
-    function renderRelatorios(dataObj){
-      const start=document.getElementById('startDate').value; const end=document.getElementById('endDate').value;
-      const hoje=new Date().toLocaleDateString('pt-BR'); let total=0, hojeCount=0;
-      const porDia={}, porMes={}, porTipo={}, porStatus={};
-      Object.values(dataObj).forEach(item=>{const iso=item.data||''; if(!iso) return; if(start&&iso<start) return; if(end&&iso>end) return; total++; const [ano,mes,dia]=iso.split('-'); const diaBR=`${dia}/${mes}/${ano}`; porDia[diaBR]=(porDia[diaBR]||0)+1; const keyMes=`${ano}-${mes}`; porMes[keyMes]=(porMes[keyMes]||0)+1; if(diaBR===hoje) hojeCount++; porTipo[item.tipo||'Desconhecido']=(porTipo[item.tipo]||0)+1; porStatus[item.status||'Pendente']=(porStatus[item.status]||0)+1; });
-      document.getElementById('loading').style.display='none';
-      document.getElementById('totalExames').textContent=total;
-      document.getElementById('hojeExames').textContent=hojeCount;
-      document.getElementById('usuariosAtivos').textContent=Object.values(dataObj).filter(u=>u.usuarioAtivo).length;
-      if(!total){document.querySelector('.charts').innerHTML='<p class="no-data">Nenhum agendamento encontrado para este período.</p>';return;}
-      const labelsDia=ordenarChavesPorData(Object.keys(porDia)); chartAgend.data.labels=labelsDia; chartAgend.data.datasets[0].data=labelsDia.map(d=>porDia[d]); chartAgend.update();
-      const months=Object.keys(porMes).sort(); const labelsMes=months.map(m=>{const [ano,mes]=m.split('-');return mes+'/'+ano;}); const valuesMes=months.map(m=>porMes[m]); const avg=valuesMes.reduce((a,b)=>a+b,0)/valuesMes.length; const avgArr=valuesMes.map(()=>parseFloat(avg.toFixed(1)));
-      chartMes.data.labels=labelsMes; chartMes.data.datasets[0].data=valuesMes; chartMes.data.datasets[1].data=avgArr; chartMes.update();
-      chartTipo.data.labels=Object.keys(porTipo); chartTipo.data.datasets[0].data=Object.values(porTipo); chartTipo.update();
-      chartStatus.data.labels=Object.keys(porStatus); chartStatus.data.datasets[0].data=Object.values(porStatus); chartStatus.update();
-    }
+    function renderRelatorios(dataObj){ const start=document.getElementById('startDate').value; const end=document.getElementById('endDate').value; const hoje=new Date().toLocaleDateString('pt-BR'); let total=0, hojeCount=0; const porDia={}, porMes={}, porTipo={}, porStatus={}; Object.values(dataObj).forEach(item=>{ const iso=item.data||''; if(!iso) return; if(start&&iso<start) return; if(end&&iso>end) return; total++; const [ano,mes,dia]=iso.split('-'); const diaBR=`${dia}/${mes}/${ano}`; porDia[diaBR]=(porDia[diaBR]||0)+1; const keyMes=`${ano}-${mes}`; porMes[keyMes]=(porMes[keyMes]||0)+1; if(diaBR===hoje) hojeCount++; porTipo[item.tipo||'Desconhecido']=(porTipo[item.tipo]||0)+1; porStatus[item.status||'Pendente']=(porStatus[item.status]||0)+1; }); document.getElementById('loading').style.display='none'; document.getElementById('totalExames').textContent=total; document.getElementById('hojeExames').textContent=hojeCount; document.getElementById('usuariosAtivos').textContent=Object.values(dataObj).filter(u=>u.usuarioAtivo).length; if(!total){ document.querySelector('.charts').innerHTML='<p class="no-data">Nenhum agendamento encontrado para este período.</p>'; return;} const labelsDia=ordenarChavesPorData(Object.keys(porDia)); chartAgend.data.labels=labelsDia; chartAgend.data.datasets[0].data=labelsDia.map(d=>porDia[d]); chartAgend.update(); const months=Object.keys(porMes).sort(); const labelsMes=months.map(m=>{const [ano,mes]=m.split('-');return mes+'/'+ano}); const valuesMes=months.map(m=>porMes[m]); const avg=valuesMes.reduce((a,b)=>a+b,0)/valuesMes.length; const avgArr=valuesMes.map(()=>parseFloat(avg.toFixed(1))); chartMes.data.labels=labelsMes; chartMes.data.datasets[0].data=valuesMes; chartMes.data.datasets[1].data=avgArr; chartMes.update(); chartTipo.data.labels=Object.keys(porTipo); chartTipo.data.datasets[0].data=Object.values(porTipo); chartTipo.update(); chartStatus.data.labels=Object.keys(porStatus); chartStatus.data.datasets[0].data=Object.values(porStatus); chartStatus.update(); }
     db.ref('agendamentos').on('value',snap=>{allData=snap.val()||{};renderRelatorios(allData);});
     document.getElementById('btnFilter').addEventListener('click',()=>renderRelatorios(allData));
   </script>

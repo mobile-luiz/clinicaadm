@@ -60,40 +60,27 @@
       color: #fff;
     }
 
-    .btn-agendar {
-      background: #27ae60;
+    .btn-agendar { background: #27ae60; }
+    .btn-agendar:hover { background: #219150; }
+
+    .btn-listar { background: #2980b9; }
+    .btn-listar:hover { background: #1f5f8a; }
+
+    .btn-perfil { background: #8e44ad; }
+    .btn-perfil:hover { background: #6d3289; }
+
+    .btn-relatorios { background: #f39c12; }
+    .btn-relatorios:hover { background: #d78b0a; }
+
+    .btn-usuarios-exame {
+      background: #16a085;
     }
-    .btn-agendar:hover {
-      background: #219150;
+    .btn-usuarios-exame:hover {
+      background: #12876e;
     }
 
-    .btn-listar {
-      background: #2980b9;
-    }
-    .btn-listar:hover {
-      background: #1f5f8a;
-    }
-
-    .btn-perfil {
-      background: #8e44ad;
-    }
-    .btn-perfil:hover {
-      background: #6d3289;
-    }
-
-    .btn-relatorios {
-      background: #f39c12;
-    }
-    .btn-relatorios:hover {
-      background: #d78b0a;
-    }
-
-    .btn-sair {
-      background: #c0392b;
-    }
-    .btn-sair:hover {
-      background: #992d22;
-    }
+    .btn-sair { background: #c0392b; }
+    .btn-sair:hover { background: #992d22; }
 
     @media (max-width: 360px) {
       .container {
@@ -132,6 +119,10 @@
 
     <button class="btn-relatorios" onclick="irParaRelatorios()">
       📈 Relatórios
+    </button>
+
+    <button class="btn-usuarios-exame" onclick="irParaUsuariosExame()">
+      👥 Usuários por Exame
     </button>
 
     <button class="btn-sair" onclick="logout()">
@@ -178,6 +169,10 @@
 
     function irParaRelatorios() {
       window.location.href = "relatorios.html";
+    }
+
+    function irParaUsuariosExame() {
+      window.location.href = "usuarios-exame.html";
     }
 
     function logout() {

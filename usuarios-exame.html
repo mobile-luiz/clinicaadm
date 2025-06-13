@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Usuários por Exame – Clínica</title>
+  <!-- Fonte Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f0f2f5;
+      --card-bg: #ffffff;
+      --primary: #4a90e2;
+      --header-bg: #4a90e2;
+      --header-text: #ffffff;
+      --text: #333333;
+      --row-alt: #fafafa;
+      --shadow: rgba(0, 0, 0, 0.05);
+      --radius: 8px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 4px 12px var(--shadow);
+    }
+    header {
+      background: var(--header-bg);
+      padding: 24px;
+      text-align: center;
+    }
+    header h2 {
+      color: var(--header-text);
+      font-size: 1.8rem;
+      font-weight: 600;
+    }
+    .result {
+      padding: 24px;
+    }
+    .table-container {
+      overflow-x: auto;
+      border-radius: var(--radius);
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px;
+    }
+    th, td {
+      padding: 16px;
+      text-align: left;
+      white-space: nowrap;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: var(--primary);
+      color: var(--header-text);
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    tbody tr:nth-child(even) {
+      background: var(--row-alt);
+    }
+    tbody tr:hover {
+      background: #e8f4fd;
+    }
+    td { font-size: 0.9rem; color: var(--text); }
+    .error {
+      text-align: center;
+      color: #c0392b;
+      font-size: 1rem;
+      padding: 40px 0;
+    }
+    @media (max-width: 600px) {
+      body { padding: 20px 10px; }
+      header h2 { font-size: 1.4rem; }
+      th, td { padding: 12px; font-size: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h2>Usuários por Exame</h2>
+    </header>
+    <div class="result" id="result"></div>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script>
+    // Inicializa apenas com a URL do Realtime Database
+    const databaseURL = "https://clinica-3f715-default-rtdb.firebaseio.com";
+    firebase.initializeApp({ databaseURL });
+    const db = firebase.database();
+
+    // Renderiza a tabela de usuários agrupados por CPF
+    function renderTable(users) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = '';
+      const wrapper = document.createElement('div');
+      wrapper.className = 'table-container';
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>CPF</th>
+            <th>Telefone</th>
+            <th>Email</th>
+            <th>Qtd Exames</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${users
+            .sort((a,b) => b.qtd - a.qtd)
+            .map(u => `
+              <tr>
+                <td>${u.nome}</td>
+                <td>${u.cpf}</td>
+                <td>${u.telefone || '-'}</td>
+                <td>${u.email}</td>
+                <td>${u.qtd}</td>
+              </tr>
+            `)
+            .join('')}
+        </tbody>
+      `;
+      wrapper.appendChild(table);
+      resultDiv.appendChild(wrapper);
+    }
+
+    // Busca todos os agendamentos e agrupa por CPF
+    db.ref('agendamentos').once('value')
+      .then(snapshot => {
+        const dados = snapshot.val() || {};
+        const grouped = {};
+        Object.values(dados).forEach(item => {
+          const cpf = item.cpf;
+          if (!cpf) return;
+          if (!grouped[cpf]) grouped[cpf] = {
+            nome: item.nome,
+            cpf,
+            telefone: item.fone || item.telefone,
+            email: item.email,
+            qtd: 0
+          };
+          grouped[cpf].qtd++;
+        });
+        const users = Object.values(grouped);
+        if (!users.length) {
+          document.getElementById('result').innerHTML = '<p class="error">Nenhum registro de exames encontrado.</p>';
+        } else {
+          renderTable(users);
+        }
+      })
+      .catch(err => {
+        document.getElementById('result').innerHTML = `<p class="error">Erro: ${err.message}</p>`;
+      });
+  </script>
+</body>
+</html>
