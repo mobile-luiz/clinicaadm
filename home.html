@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><!-- viewport para mobile -->
+  <title>Menu Principal – Clínica</title>
+  <style>
+    /* reset simples */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7fa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      background: #ffffff;
+      width: 100%;
+      max-width: 360px;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .container h2 {
+      font-size: 1.6rem;
+      margin-bottom: 16px;
+      color: #2c3e50;
+    }
+
+    .container p {
+      margin-bottom: 20px;
+      font-size: 1rem;
+      color: #555;
+    }
+
+    .container button {
+      width: 100%;
+      padding: 14px;
+      margin: 8px 0;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: #fff;
+    }
+
+    .btn-agendar {
+      background: #27ae60;
+    }
+    .btn-agendar:hover {
+      background: #219150;
+    }
+
+    .btn-listar {
+      background: #2980b9;
+    }
+    .btn-listar:hover {
+      background: #1f5f8a;
+    }
+
+    .btn-perfil {
+      background: #8e44ad;
+    }
+    .btn-perfil:hover {
+      background: #6d3289;
+    }
+
+    .btn-sair {
+      background: #c0392b;
+    }
+    .btn-sair:hover {
+      background: #992d22;
+    }
+
+    @media (max-width: 360px) {
+      .container {
+        padding: 16px;
+        border-radius: 8px;
+      }
+      .container h2 {
+        font-size: 1.4rem;
+      }
+      .container p {
+        font-size: 0.95rem;
+      }
+      .container button {
+        padding: 12px;
+        font-size: 0.95rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🩺 Seja bem-vindo à Clínica</h2>
+    <p>Escolha uma opção abaixo:</p>
+
+    <button class="btn-agendar" onclick="irParaAgendamento()">
+      📅 Agendar Exame
+    </button>
+
+    <button class="btn-listar" onclick="irParaAgendamentos()">
+      📋 Ver Agendamentos
+    </button>
+
+    <button class="btn-perfil" onclick="irParaPerfil()">
+      👤 Meu Perfil
+    </button>
+
+    <button class="btn-sair" onclick="logout()">
+      🚪 Sair
+    </button>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDIfTE3Nkwb_yiDKJhmwj_o3I8guislO8g",
+      authDomain: "clinica-3f715.firebaseapp.com",
+      databaseURL: "https://clinica-3f715-default-rtdb.firebaseio.com",
+      projectId: "clinica-3f715",
+      storageBucket: "clinica-3f715.firebasestorage.app",
+      messagingSenderId: "456473690332",
+      appId: "1:456473690332:web:667b239d83c802ecb83419",
+      measurementId: "G-7XHX0XC3BD"
+    };
+
+    // Inicializa Firebase
+    firebase.initializeApp(firebaseConfig);
+
+    // Garante que só usuário logado veja este menu
+    firebase.auth().onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = "login.html";
+      }
+    });
+
+    function irParaAgendamento() {
+      window.location.href = "agendamento.html";
+    }
+
+    function irParaAgendamentos() {
+      window.location.href = "pedidos.html";
+    }
+
+    function irParaPerfil() {
+      window.location.href = "perfil.html";
+    }
+
+    function logout() {
+      firebase.auth().signOut().then(() => {
+        window.location.href = "login.html";
+      });
+    }
+  </script>
+</body>
+</html>

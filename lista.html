@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><!-- viewport para mobile -->
+  <title>Lista de Agendamentos</title>
+  <style>
+    /* reset simples */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 10px;
+    }
+
+    h2 {
+      text-align: center;
+      margin: 20px 0;
+      font-size: 1.5rem;
+      color: #2c3e50;
+    }
+
+    .filtros {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    .filtros input {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+
+    #filtroTipo { flex: 2 1 200px; }
+    #filtroData { flex: 1 1 120px; }
+
+    .conteudo {
+      background: #fff;
+      padding: 10px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.08);
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: #ecf0f1;
+      color: #333;
+    }
+
+    .btn-excluir {
+      padding: 4px 6px;
+      background: #e74c3c;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+
+    .btn-excluir:hover {
+      background: #c0392b;
+    }
+
+    @media (max-width: 480px) {
+      h2 { font-size: 1.25rem; }
+      .filtros input { font-size: 0.9rem; padding: 6px; }
+      table { min-width: auto; }
+      th, td { padding: 6px; font-size: 0.8rem; }
+      .btn-excluir { padding: 3px 5px; font-size: 0.7rem; }
+    }
+  </style>
+</head>
+<body>
+  <h2>📋 Lista de Agendamentos</h2>
+
+  <div class="filtros">
+    <input type="text" id="filtroTipo" placeholder="Filtrar por tipo…">
+    <input type="date"  id="filtroData">
+  </div>
+
+  <div class="conteudo">
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>CPF</th>
+          <th>Telefone</th>
+          <th>E-mail</th>
+          <th>Exame</th>
+          <th>Criado em</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="listaAgendamentos">
+        <tr><td colspan="7">Carregando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script>
+    // sua config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDIfTE3Nkwb_yiDKJhmwj_o3I8guislO8g",
+      authDomain: "clinica-3f715.firebaseapp.com",
+      databaseURL: "https://clinica-3f715-default-rtdb.firebaseio.com",
+      projectId: "clinica-3f715",
+      storageBucket: "clinica-3f715.firebasestorage.app",
+      messagingSenderId: "456473690332",
+      appId: "1:456473690332:web:667b239d83c802ecb83419",
+      measurementId: "G-7XHX0XC3BD"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const dbRef = firebase.database().ref("agendamentos");
+
+    const filtroTipo = document.getElementById("filtroTipo");
+    const filtroData = document.getElementById("filtroData");
+    const tbody       = document.getElementById("listaAgendamentos");
+    let agendamentos  = [];
+
+    // converte "12/06/2025, 20:18" → Date
+    function parseData(str) {
+      if (!str) return new Date(0);
+      const [d, t]         = str.split(", "),
+            [dia,mes,ano]  = d.split("/").map(Number),
+            [hh,mm]        = t.split(":").map(Number);
+      return new Date(ano, mes-1, dia, hh, mm);
+    }
+
+    // exibe tabela filtrada
+    function exibir() {
+      const tp = filtroTipo.value.trim().toLowerCase();
+      const fd = filtroData.value;
+      const filt = agendamentos.filter(a => {
+        const okTipo = !tp || a.tipo.toLowerCase().includes(tp);
+        if (!fd) return okTipo;
+        return okTipo && parseData(a.criadoEmFormatado)
+                         .toISOString().startsWith(fd);
+      });
+
+      tbody.innerHTML = "";
+      if (!filt.length) {
+        tbody.innerHTML = "<tr><td colspan='7'>Nenhum agendamento.</td></tr>";
+        return;
+      }
+
+      filt.sort((a,b) => parseData(b.criadoEmFormatado) - parseData(a.criadoEmFormatado))
+          .forEach(a => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${a.nome}</td>
+          <td>${a.cpf}</td>
+          <td>${a.telefone}</td>
+          <td>${a.email}</td>
+          <td>${a.tipo}</td>
+          <td>${a.criadoEmFormatado}</td>
+          <td>
+            <button class="btn-excluir" onclick="excluir('${a.key}')">Excluir</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // remove do Firebase
+    function excluir(key) {
+      if (!confirm("Confirma exclusão deste agendamento?")) return;
+      dbRef.child(key).remove();
+    }
+
+    // pega dados iniciais
+    dbRef.on("value", snap => {
+      agendamentos = [];
+      snap.forEach(ch => {
+        const v = ch.val();
+        agendamentos.push({
+          key: ch.key,
+          nome: v.nome,
+          cpf: v.cpf,
+          telefone: v.telefone,
+          email: v.email,
+          tipo: v.tipo,
+          criadoEmFormatado: v.criadoEmFormatado || ""
+        });
+      });
+      exibir();
+    });
+
+    // filtros
+    filtroTipo.addEventListener("input", exibir);
+    filtroData.addEventListener("change", exibir);
+
+    // restrição de acesso opcional
+    firebase.auth().onAuthStateChanged(u => {
+      if (!u) window.location.href = "login.html";
+    });
+  </script>
+</body>
+</html>
